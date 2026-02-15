@@ -15,6 +15,8 @@ import com.example.bank.ws.DepositRequest;
 import com.example.bank.ws.DepositResponse;
 import com.example.bank.ws.GetAccountRequest;
 import com.example.bank.ws.GetAccountResponse;
+import com.example.bank.ws.WithdrawRequest;
+import com.example.bank.ws.WithdrawResponse;
 
 @Endpoint
 public class BankEndpoint {
@@ -50,6 +52,29 @@ public class BankEndpoint {
   public DepositResponse deposit(@RequestPayload DepositRequest request) {
     BigDecimal newBalance = bankService.deposit(request.getAccountId(), request.getAmount());
     DepositResponse resp = new DepositResponse();
+    resp.setNewBalance(newBalance);
+    return resp;
+  }
+
+  @PayloadRoot(namespace = NAMESPACE_URI, localPart = "WithdrawRequest")
+  @ResponsePayload
+  public WithdrawResponse withdraw(@RequestPayload WithdrawRequest request) {
+    if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new IllegalArgumentException("Amount must be positive");
+    }
+
+    Account acc = bankService.getAccount(request.getAccountId());
+    if (acc == null) {
+      throw new UnknownAccountException("Unknown accountId: " + request.getAccountId());
+    }
+
+    if (acc.balance.compareTo(request.getAmount()) < 0) {
+      throw new IllegalStateException("Insufficient balance");
+    }
+
+    BigDecimal newBalance = bankService.withdraw(request.getAccountId(), request.getAmount());
+    
+    WithdrawResponse resp = new WithdrawResponse();
     resp.setNewBalance(newBalance);
     return resp;
   }
